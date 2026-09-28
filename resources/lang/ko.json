@@ -1,0 +1,7 @@
+{
+    "permissions.groups.submission-proof.description": "Submission Proof 앱이 제공하는 권한입니다.",
+    "permissions.groups.submission-proof.label": "Submission Proof",
+    "submission-proof.overview.empty.description": "앱 메뉴에서 사용할 페이지를 선택하세요.",
+    "submission-proof.overview.subtitle": "Submission Proof에 오신 것을 환영합니다.",
+    "submission-proof.overview.title": "Submission Proof"
+}

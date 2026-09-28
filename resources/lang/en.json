@@ -1,0 +1,7 @@
+{
+    "permissions.groups.submission-proof.description": "Permissions provided by the Submission Proof app.",
+    "permissions.groups.submission-proof.label": "Submission Proof",
+    "submission-proof.overview.empty.description": "Choose an available page from the App menu.",
+    "submission-proof.overview.subtitle": "Welcome to Submission Proof.",
+    "submission-proof.overview.title": "Submission Proof"
+}

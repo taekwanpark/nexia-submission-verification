@@ -1,0 +1,7 @@
+{
+    "permissions.groups.submission-proof.description": "Submission Proof 应用提供的权限。",
+    "permissions.groups.submission-proof.label": "Submission Proof",
+    "submission-proof.overview.empty.description": "请从应用菜单中选择可用页面。",
+    "submission-proof.overview.subtitle": "欢迎使用 Submission Proof。",
+    "submission-proof.overview.title": "Submission Proof"
+}

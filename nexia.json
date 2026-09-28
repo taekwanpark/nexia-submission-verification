@@ -1,0 +1,24 @@
+{
+    "schema_version": "2",
+    "runtime": "laravel",
+    "core_version": "^0.6.1",
+    "test_paths": [
+        "tests"
+    ],
+    "navigation": [
+        { "screen": "submission-proof", "group": null, "sort": 0, "icon": "box" }
+    ],
+    "app": {
+        "manifest": "Nexia\\Apps\\Nexia\\SubmissionProof\\SubmissionProofAppManifest",
+        "app_family": "other",
+        "app_icon": "box",
+        "launcher_order": 500,
+        "overview_navigation_id": "submission-proof",
+        "app_name": "Submission Proof",
+        "app_key": "submission-proof",
+        "app_table_prefix": "submission_proof",
+        "prerequisite_apps": [],
+        "descriptions": {"en":"Submission Proof app for Nexia."},
+        "readiness": "available"
+    }
+}

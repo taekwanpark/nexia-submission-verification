@@ -1,0 +1,42 @@
+{
+    "name": "nexia/submission-proof",
+    "description": "Submission Proof package for Nexia",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "nexia/sdk-laravel": "^0.6.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.4"
+    },
+    "scripts": {
+        "test": "pest --compact"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Nexia\\Apps\\Nexia\\SubmissionProof\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Nexia\\Apps\\Nexia\\SubmissionProof\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        },
+        "laravel": {
+            "providers": [
+                "Nexia\\Apps\\Nexia\\SubmissionProof\\SubmissionProofServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
