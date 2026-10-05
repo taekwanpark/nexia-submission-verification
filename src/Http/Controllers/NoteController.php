@@ -124,9 +124,10 @@ class NoteController extends Controller
         $this->authorize('update', $note);
 
         $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
         ]);
 
+        // Partial update: an omitted name intentionally leaves the record unchanged.
         $note->update($validated);
 
         return response()->json([
@@ -144,6 +145,8 @@ class NoteController extends Controller
 
         $this->authorize('delete', $note);
 
+        // Final from this App UI: retain soft-deleted rows and audit history until
+        // the operator retires this test tenant. No restore or purge is offered.
         $note->delete();
 
         return response()->json(['message' => __('submission-proof.note.deleted')]);
