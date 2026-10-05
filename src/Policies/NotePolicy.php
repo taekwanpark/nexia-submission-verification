@@ -43,10 +43,8 @@ class NotePolicy
 
     public function delete(Actor $user, Note $note): bool
     {
-        // Destructive lifecycle actions are opt-in. Keep the generated
-        // delete route and row action available for the domain owner to
-        // enable explicitly after choosing the resource lifecycle.
-        return false;
+        return $this->allowsPermission($user, 'submission-proof.note.delete')
+            && $this->matchesAuthorizationContract($note);
     }
 
     private function matchesAuthorizationContract(Note $note): bool

@@ -6,16 +6,11 @@ namespace Nexia\Apps\Nexia\SubmissionProof\Http\Controllers;
 
 use Nexia\Laravel\Access\Contracts\ResourceActionDecisions;
 use Nexia\Laravel\Access\Contracts\ResourceAuthorization;
-use Nexia\Laravel\Access\Contracts\OrganizationTargetResolver;
-use Nexia\Laravel\Http\OrganizationTargetQueryRequest;
 use Nexia\Laravel\ResourceTransfer\Concerns\BuildsResourceTransferMeta;
 use Nexia\Laravel\Http\Concerns\ParsesResourceListQuery;
 use Nexia\Laravel\Http\Controllers\Controller;
 use Nexia\ResourceTransfer\Contracts\ResourceTransferDefinition;
 use Nexia\ResourceTransfer\ResourceTransfers;
-use Nexia\Organization\Contracts\LegalEntity;
-use Nexia\Organization\Contracts\OrganizationDirectory;
-use Nexia\Organization\OrganizationTargetQuery;
 use Nexia\Apps\Nexia\SubmissionProof\Models\Note;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,34 +46,8 @@ class NoteController extends Controller
     {
         $listQuery = $this->resourceListQuery($request, new Note, default: 25, maximum: 100);
 
-        if (false) {
-            $targetQuery = OrganizationTargetQueryRequest::from($request);
-            abort_if($targetQuery->operatingUnitPublicIds !== null, 422);
-            $targets = array_values(array_filter(
-                app(OrganizationTargetResolver::class)->resolveListTargets(
-                $request->user(),
-                'submission-proof.note.read',
-                $targetQuery,
-                )->targets,
-                static fn ($target): bool => $target->operatingUnit === null,
-            ));
-            if ($targetQuery->legalEntityPublicIds !== null) {
-                $resolved = array_map(
-                    static fn ($target): string => strtolower($target->legalEntity->publicId()),
-                    $targets,
-                );
-                sort($resolved, SORT_STRING);
-                abort_unless($resolved === $targetQuery->legalEntityPublicIds, 403);
-            }
-            $query = app(ResourceAuthorization::class)->scopeVisibleForLegalEntities(
-                Note::query(),
-                'submission-proof.note',
-                array_map(static fn ($target): int => (int) $target->legalEntity->key(), $targets),
-            );
-        } else {
-            $this->authorize('viewAny', Note::class);
-            $query = Note::query()->visibleTo($request->user());
-        }
+        $this->authorize('viewAny', Note::class);
+        $query = Note::query()->visibleTo($request->user());
 
         $paginated = $query
             ->filters($listQuery)
@@ -102,12 +71,7 @@ class NoteController extends Controller
                 'per_page' => $paginated->perPage(),
                 'total' => $paginated->total(),
                 'list_schema' => (new Note)->listSchema(),
-                'actions' => [
-                    ...$actionDecisions->forCollection($request->user(), Note::class),
-                    'create' => false
-                        ? $this->hasTarget($request, 'submission-proof.note.create')
-                        : $actionDecisions->forCollection($request->user(), Note::class)['create'],
-                ],
+                'actions' => $actionDecisions->forCollection($request->user(), Note::class),
                 'resource_transfer' => $transfer instanceof ResourceTransferDefinition
                     ? $this->resourceTransferMeta($request, $transfer)
                     : null,
@@ -117,7 +81,7 @@ class NoteController extends Controller
 
     public function show(Request $request, string $note): JsonResponse
     {
-        $note = $this->resolveNote($request, $note, 'submission-proof.note.read');
+        $note = $this->resolveNote($note);
 
         $this->authorize('view', $note);
 
@@ -132,25 +96,6 @@ class NoteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $legalEntityId = null;
-        if (false) {
-            $targets = array_values(array_filter(
-                app(OrganizationTargetResolver::class)->resolveListTargets(
-                $request->user(),
-                'submission-proof.note.create',
-                $this->createTargetQuery($request),
-                )->targets,
-                static fn ($target): bool => $target->operatingUnit === null,
-            ));
-            if (count($targets) !== 1) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'organization_target' => [__('access.organization_target.select_one_legal_entity')],
-                ]);
-            }
-            $target = $targets[0];
-            $legalEntityId = (int) $target->legalEntity->key();
-            $this->applyTarget($request, $target->legalEntity);
-        }
         $this->authorize('create', Note::class);
 
         $validated = $request->validate([
@@ -160,7 +105,7 @@ class NoteController extends Controller
         $record = Note::create(array_merge(
             $validated,
             app(ResourceAuthorization::class)
-                ->creationAttributes('submission-proof.note', $legalEntityId),
+                ->creationAttributes('submission-proof.note'),
         ));
 
         return response()->json([
@@ -174,7 +119,7 @@ class NoteController extends Controller
 
     public function update(Request $request, string $note): JsonResponse
     {
-        $note = $this->resolveNote($request, $note, 'submission-proof.note.update');
+        $note = $this->resolveNote($note);
 
         $this->authorize('update', $note);
 
@@ -195,7 +140,7 @@ class NoteController extends Controller
 
     public function destroy(Request $request, string $note): JsonResponse
     {
-        $note = $this->resolveNote($request, $note, 'submission-proof.note.delete');
+        $note = $this->resolveNote($note);
 
         $this->authorize('delete', $note);
 
@@ -204,148 +149,9 @@ class NoteController extends Controller
         return response()->json(['message' => __('submission-proof.note.deleted')]);
     }
 
-    public function legalEntityIndex(Request $request, LegalEntity $legalEntity): JsonResponse
+    private function resolveNote(string $note): Note
     {
-        $this->applyLegacyTarget($request, $legalEntity);
-
-        return $this->index($request);
-    }
-
-    public function legalEntityShow(Request $request, LegalEntity $legalEntity, string $note): JsonResponse
-    {
-        $this->assertRecordTargetInput($request);
-
-        return $this->show($request, $note);
-    }
-
-    public function legalEntityStore(Request $request, LegalEntity $legalEntity): JsonResponse
-    {
-        $this->applyLegacyTarget($request, $legalEntity);
-
-        return $this->store($request);
-    }
-
-    public function legalEntityUpdate(Request $request, LegalEntity $legalEntity, string $note): JsonResponse
-    {
-        $this->assertRecordTargetInput($request);
-
-        return $this->update($request, $note);
-    }
-
-    public function legalEntityDestroy(Request $request, LegalEntity $legalEntity, string $note): JsonResponse
-    {
-        $this->assertRecordTargetInput($request);
-
-        return $this->destroy($request, $note);
-    }
-
-    private function resolveNote(Request $request, string $note, string $permission): Note
-    {
-        // public_id (UUID) is the only accepted route key. The integer id
-        // stays internal and is never resolvable from a URL (doctrine 11).
-        $record = Note::query()->where('public_id', $note)->firstOrFail();
-        if (false) {
-            $this->assertRecordTargetInput($request);
-            $legalEntity = app(OrganizationDirectory::class)->findLegalEntityByKey((int) $record->legal_entity_id);
-            abort_unless($legalEntity instanceof LegalEntity, 404);
-            $legacyLegalEntity = $request->route('legalEntity');
-            abort_unless(
-                ! ($legacyLegalEntity instanceof LegalEntity)
-                    || (int) $legacyLegalEntity->key() === (int) $legalEntity->key(),
-                404,
-            );
-            $expected = [strtolower((string) $legalEntity->publicId())];
-            $requestedPublicId = $request->input('legal_entity_public_id');
-            abort_unless(
-                $requestedPublicId === null
-                    || (is_string($requestedPublicId)
-                        && strtolower($requestedPublicId) === $expected[0]),
-                404,
-            );
-            $this->applyTarget($request, $legalEntity);
-            try {
-                $targets = app(OrganizationTargetResolver::class)->resolveListTargets(
-                    $request->user(),
-                    $permission,
-                    OrganizationTargetQuery::fromInput(['legal_entity_public_ids' => [(string) $legalEntity->publicId()]]),
-                );
-            } catch (\Illuminate\Auth\Access\AuthorizationException) {
-                abort(404);
-            }
-            abort_unless(collect($targets->targets)->contains(
-                static fn ($target): bool => $target->operatingUnit === null
-                    && (int) $target->legalEntity->key() === (int) $legalEntity->key(),
-            ), 404);
-        }
-
-        return $record;
-    }
-
-    private function assertRecordTargetInput(Request $request): void
-    {
-        abort_if(
-            $request->has('legal_entity_id')
-                || $request->has('legal_entity_public_ids')
-                || $request->has('operating_unit_public_id')
-                || $request->has('operating_unit_public_ids'),
-            404,
-        );
-    }
-
-    private function applyTarget(Request $request, LegalEntity $legalEntity): void
-    {
-        $request->attributes->set('legal_entity_id', (int) $legalEntity->key());
-        $request->attributes->set('organization_target_legal_entity', $legalEntity);
-    }
-
-    private function applyLegacyTarget(Request $request, LegalEntity $legalEntity): void
-    {
-        $targetQuery = OrganizationTargetQueryRequest::from($request);
-        $expected = [strtolower((string) $legalEntity->publicId())];
-        abort_unless($targetQuery->legalEntityPublicIds === null || $targetQuery->legalEntityPublicIds === $expected, 404);
-        $request->query->set('legal_entity_public_ids', [(string) $legalEntity->publicId()]);
-        $this->applyTarget($request, $legalEntity);
-    }
-
-    private function createTargetQuery(Request $request): OrganizationTargetQuery
-    {
-        $input = $request->input('legal_entity_public_id');
-        $hasPluralLegalEntityTarget = $request->has('legal_entity_public_ids');
-        $hasOperatingUnitTarget = $request->has('operating_unit_public_id')
-            || $request->has('operating_unit_public_ids');
-        if ($hasOperatingUnitTarget) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'organization_target' => [__('access.organization_target.select_one_legal_entity')],
-            ]);
-        }
-        $legacyLegalEntity = $request->route('legalEntity');
-        if ($input === null) {
-            if (! ($legacyLegalEntity instanceof LegalEntity) && $hasPluralLegalEntityTarget) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'organization_target' => [__('access.organization_target.select_one_legal_entity')],
-                ]);
-            }
-
-            return OrganizationTargetQueryRequest::from($request);
-        }
-        if (! is_string($input) || $hasPluralLegalEntityTarget) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'legal_entity_public_id' => [__('access.organization_target.select_one_legal_entity')],
-            ]);
-        }
-
-        return OrganizationTargetQuery::fromInput(['legal_entity_public_ids' => [$input]]);
-    }
-
-    private function hasTarget(Request $request, string $permission): bool
-    {
-        try {
-            return collect(app(OrganizationTargetResolver::class)->resolveListTargets(
-                $request->user(), $permission, OrganizationTargetQuery::fromInput([]),
-            )->targets)->contains(static fn ($target): bool => $target->operatingUnit === null);
-        } catch (\Illuminate\Auth\Access\AuthorizationException) {
-            return false;
-        }
+        return Note::query()->where('public_id', $note)->firstOrFail();
     }
 
     /** @return array<string, mixed> */
@@ -354,18 +160,8 @@ class NoteController extends Controller
         Note $record,
         ResourceActionDecisions $actionDecisions,
     ): array {
-        $payload = $record->toArray();
-        if (false) {
-            $legalEntity = app(OrganizationDirectory::class)
-                ->findLegalEntityByKey((int) $record->legal_entity_id);
-            abort_unless($legalEntity instanceof LegalEntity, 404);
-            $this->applyTarget($request, $legalEntity);
-            $payload['legal_entity_public_id'] = (string) $legalEntity->publicId();
-            $payload['legal_entity_label'] = $legalEntity->displayLabel();
-        }
-
         return [
-            ...$payload,
+            ...$record->toArray(),
             'actions' => $actionDecisions->forRecord($request->user(), $record),
         ];
     }

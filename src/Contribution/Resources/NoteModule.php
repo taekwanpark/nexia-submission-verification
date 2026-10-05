@@ -69,7 +69,6 @@ final class NoteModule extends AbstractResourceModule implements NavigationContr
         // Keep these aligned when changing store/update validation or target selection.
         $inputProperties = [
             'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
-            ...(false ? ['legal_entity_public_id' => ['type' => 'string', 'format' => 'uuid']] : []),
         ];
 
         return ResourceModuleDefinition::fromDescriptor(new ResourceDescriptor(
