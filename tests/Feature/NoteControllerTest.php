@@ -35,6 +35,7 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
     $translator = new Translator(new ArrayLoader, 'en');
     $app->instance('translator', $translator);
     $validation = new Factory($translator, $app);
+    $app->instance('validator', $validation);
     Request::macro('validate', fn (array $rules) => $validation->make($this->all(), $rules)->validate());
     $responses = $this->createStub(\Illuminate\Contracts\Routing\ResponseFactory::class);
     $responses->method('json')->willReturnCallback(fn ($data, $status = 200) => new \Illuminate\Http\JsonResponse($data, $status));
@@ -45,9 +46,15 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
     $db->bootEloquent();
     $app->instance('events', $db->getEventDispatcher());
     $app->instance('auth', new \Illuminate\Auth\AuthManager($app));
+    $app->register(\Laravel\Scout\ScoutServiceProvider::class);
     $app->register(\Spatie\Activitylog\ActivitylogServiceProvider::class);
     $app->make(\Spatie\Activitylog\Support\CauserResolver::class)->resolveUsing(fn () => null);
     \Laravel\Scout\ModelObserver::disableSyncingFor(Note::class);
+    $search = $this->createStub(\Nexia\Laravel\Models\Contracts\ScoutSearchEngineResolver::class);
+    $engine = new \Laravel\Scout\Engines\DatabaseEngine;
+    $search->method('defaultEngine')->willReturn($engine);
+    $search->method('databaseEngine')->willReturn($engine);
+    \Nexia\Laravel\Models\ScoutSearchResolverRegistry::configure(null, $search);
     $app->instance('db', $db->getDatabaseManager());
     $app->bind('db.schema', fn () => $db->getConnection()->getSchemaBuilder());
     $connections = $this->createStub(AppDatabaseConnections::class);
@@ -128,6 +135,23 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
             PermissionAuthorizerResolver::configure($permission);
             expect($controller->restore($request([]), $id)->getStatusCode())->toBe(200)
                 ->and(Note::where('public_id', $id)->firstOrFail()->name)->toBe('Updated note');
+            $fixture = new \Nexia\Apps\Nexia\SubmissionProof\Contribution\ReviewFixture;
+            $context = new \Nexia\Fixture\FixtureContext('review', [], [], 1, '00000000-0000-4000-8000-000000000001');
+            $fixture->seed($context);
+            $fixture->seed($context);
+            expect(Note::count())->toBe(3);
+            $listRequest = $request([]);
+            $listRequest->query->replace(['sort' => '-name', 'per_page' => 1]);
+            $page = $controller->index($listRequest)->getData(true);
+            expect($page['meta']['total'])->toBe(3)
+                ->and($page['meta']['per_page'])->toBe(1)
+                ->and($page['data'][0]['name'])->toBe('Zulu review note');
+            $listRequest->query->replace(['search' => 'Alpha']);
+            $page = $controller->index($listRequest)->getData(true);
+            expect($page['meta']['total'])->toBe(1)
+                ->and($page['data'][0]['name'])->toBe('Alpha review note');
+            $listRequest->query->replace(['per_page' => 101]);
+            expect(fn () => $controller->index($listRequest))->toThrow(\Illuminate\Validation\ValidationException::class);
             expect($db->getConnection()->table('activity_log')->pluck('event')->all())->toContain('created', 'updated', 'deleted', 'restored');
         })();
     } finally {
