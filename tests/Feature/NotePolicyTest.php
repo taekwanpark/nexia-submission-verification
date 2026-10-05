@@ -41,6 +41,7 @@ test('record actions require their exact permission and a matching tenant record
     ['view', 'submission-proof.note.read'],
     ['update', 'submission-proof.note.update'],
     ['delete', 'submission-proof.note.delete'],
+    ['restore', 'submission-proof.note.delete'],
 ]);
 
 test('collection actions require their exact permission', function (string $action, string $permission) {

@@ -106,10 +106,9 @@ it does not change ownership or bypass the update permission check.
 
 Deletion requires the explicit `submission-proof.note.delete` permission and a
 matching tenant record. It is a soft delete: the record disappears from ordinary
-list/detail/update routes, while its audit/history remains retained. This initial
-App has no end-user restore or purge operation. Deleted records remain retained
-until the test tenant is retired by its platform operator; a future retention or
-restore feature requires its own reviewed permissions and implementation. No
+list/detail/update routes, while its audit/history remains retained. Recovery by public UUID is available through POST /api/submission-proof/notes/{uuid}/restore,
+requiring the same delete permission and record ownership match. There is no purge operation. Deleted records remain retained
+until the test tenant is retired by its platform operator; a future purge feature requires its own reviewed permissions and implementation. No
 background purge or destructive migration is included in this release.
 
 The App policy tests exercise exact permission denial/grant and record mismatch.

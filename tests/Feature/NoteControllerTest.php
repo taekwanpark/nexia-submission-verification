@@ -26,7 +26,7 @@ use Nexia\Laravel\Database\AppDatabaseConnectionsResolver;
 use Nexia\Laravel\Database\Contracts\AppDatabaseConnections;
 
 // Real controller/model/validation and SQLite persistence; host services use SDK contracts.
-// Host-managed audit/search side effects are outside this App-owned test.
+// Activity logging uses the installed dependency; external search indexing is disabled.
 test('authorized Note writes persist, validate, serialize and soft delete', function () {
     $previous = \Illuminate\Container\Container::getInstance();
     $app = new Application(dirname(__DIR__, 2));
@@ -41,7 +41,13 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
     $app->instance(\Illuminate\Contracts\Routing\ResponseFactory::class, $responses);
     $db = new Capsule($app);
     $db->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
+    $db->setEventDispatcher(new \Illuminate\Events\Dispatcher($app));
     $db->bootEloquent();
+    $app->instance('events', $db->getEventDispatcher());
+    $app->instance('auth', new \Illuminate\Auth\AuthManager($app));
+    $app->register(\Spatie\Activitylog\ActivitylogServiceProvider::class);
+    $app->make(\Spatie\Activitylog\Support\CauserResolver::class)->resolveUsing(fn () => null);
+    \Laravel\Scout\ModelObserver::disableSyncingFor(Note::class);
     $app->instance('db', $db->getDatabaseManager());
     $app->bind('db.schema', fn () => $db->getConnection()->getSchemaBuilder());
     $connections = $this->createStub(AppDatabaseConnections::class);
@@ -68,7 +74,8 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
     };
     try {
         (require dirname(__DIR__, 2).'/database/migrations/tenant/2026_10_05_002106_create_submission_proof_notes_table.php')->up();
-        Model::withoutEvents(function () use ($request) {
+        (require dirname(__DIR__, 2).'/vendor/spatie/laravel-activitylog/database/migrations/create_activity_log_table.php.stub')->up();
+        (function () use ($request, $db) {
             $controller = new NoteController;
             foreach ([[], ['name' => ''], ['name' => str_repeat('x', 256)]] as $invalid) {
                 expect(fn () => $controller->store($request($invalid)))->toThrow(\Illuminate\Validation\ValidationException::class);
@@ -91,7 +98,10 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
                 ->and(Note::where('public_id', $id)->exists())->toBeFalse()
                 ->and(Note::withTrashed()->where('public_id', $id)->firstOrFail()->trashed())->toBeTrue();
             expect(fn () => $controller->show($request([]), $id))->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
-        });
+            expect($controller->restore($request([]), $id)->getStatusCode())->toBe(200)
+                ->and(Note::where('public_id', $id)->firstOrFail()->name)->toBe('Updated note');
+            expect($db->getConnection()->table('activity_log')->pluck('event')->all())->toContain('created', 'updated', 'deleted', 'restored');
+        })();
     } finally {
         PermissionAuthorizerResolver::resetForTests();
         Model::clearBootedModels();

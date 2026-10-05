@@ -47,6 +47,13 @@ class NotePolicy
             && $this->matchesAuthorizationContract($note);
     }
 
+    public function restore(Actor $user, Note $note): bool
+    {
+        // The same lifecycle authority governs deleting and recovering a Note.
+        return $this->allowsPermission($user, 'submission-proof.note.delete')
+            && $this->matchesAuthorizationContract($note);
+    }
+
     private function matchesAuthorizationContract(Note $note): bool
     {
         return app(ResourceAuthorization::class)

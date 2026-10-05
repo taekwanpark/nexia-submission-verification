@@ -145,11 +145,22 @@ class NoteController extends Controller
 
         $this->authorize('delete', $note);
 
-        // Final from this App UI: retain soft-deleted rows and audit history until
-        // the operator retires this test tenant. No restore or purge is offered.
+        // Keep history and allow recovery by public UUID through restore().
+        // Tenant retirement owns final removal; this App has no purge action.
         $note->delete();
 
         return response()->json(['message' => __('submission-proof.note.deleted')]);
+    }
+
+    public function restore(Request $request, string $note): JsonResponse
+    {
+        $record = Note::onlyTrashed()->where('public_id', $note)->firstOrFail();
+        $this->authorize('restore', $record);
+        $record->restore();
+
+        return response()->json(['note' => $this->serialize(
+            $request, $record->refresh(), app(ResourceActionDecisions::class),
+        )]);
     }
 
     private function resolveNote(string $note): Note

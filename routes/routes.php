@@ -29,6 +29,7 @@ Route::middleware([
         });
 
         Route::middleware(['can.tenant_wide:submission-proof.note.delete'])->group(function () {
+            Route::post('/notes/{note}/restore', [NoteController::class, 'restore'])->whereUuid('note');
             Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->whereUuid('note');
         });
     });
