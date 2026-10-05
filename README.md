@@ -96,3 +96,23 @@ Without changing your global npm installation, run
 The generated Docker image already includes this npm version.
 
 Resource generation creates the PHP/React application screens by default. Add `--with-filament` only when you also need Filament administration screens. Omitting that option, including during `--force` regeneration, preserves existing administration files and their manifest registration.
+
+## Note lifecycle and API contract
+
+Notes are tenant-owned acceptance records. Create requires a nonempty name up to
+255 characters. Update is a partial update: omitting `name` intentionally leaves
+it unchanged and returns the current record. This permits an empty update body;
+it does not change ownership or bypass the update permission check.
+
+Deletion requires the explicit `submission-proof.note.delete` permission and a
+matching tenant record. It is a soft delete: the record disappears from ordinary
+list/detail/update routes, while its audit/history remains retained. This initial
+App has no end-user restore or purge operation. Deleted records remain retained
+until the test tenant is retired by its platform operator; a future retention or
+restore feature requires its own reviewed permissions and implementation. No
+background purge or destructive migration is included in this release.
+
+The App policy tests exercise exact permission denial/grant and record mismatch.
+The platform build separately checks migration, protocol and denied-write behavior.
+Live acceptance validates authorized create/update/read/delete and isolation on the
+Developers host; the unit suite is not claimed to replace that request-level check.

@@ -42,3 +42,21 @@ test('record actions require their exact permission and a matching tenant record
     ['update', 'submission-proof.note.update'],
     ['delete', 'submission-proof.note.delete'],
 ]);
+
+test('collection actions require their exact permission', function (string $action, string $permission) {
+    $actor = $this->createMockForIntersectionOfInterfaces([Actor::class, Authenticatable::class]);
+    try {
+        foreach ([false, true] as $granted) {
+            $permissions = $this->createMock(PermissionAuthorizer::class);
+            $permissions->expects($this->once())->method('allowsPermission')
+                ->with($actor, $permission, null, null, true)->willReturn($granted);
+            PermissionAuthorizerResolver::configure($permissions);
+            expect((new NotePolicy)->{$action}($actor))->toBe($granted);
+        }
+    } finally {
+        PermissionAuthorizerResolver::resetForTests();
+    }
+})->with([
+    ['viewAny', 'submission-proof.note.read'],
+    ['create', 'submission-proof.note.create'],
+]);
