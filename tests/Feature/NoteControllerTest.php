@@ -74,7 +74,7 @@ test('authorized Note writes persist, validate, serialize and soft delete', func
     };
     try {
         (require dirname(__DIR__, 2).'/database/migrations/tenant/2026_10_05_002106_create_submission_proof_notes_table.php')->up();
-        (require dirname(__DIR__, 2).'/vendor/spatie/laravel-activitylog/database/migrations/create_activity_log_table.php.stub')->up();
+        (require \Composer\InstalledVersions::getInstallPath('spatie/laravel-activitylog').'/database/migrations/create_activity_log_table.php.stub')->up();
         (function () use ($request, $db) {
             $controller = new NoteController;
             foreach ([[], ['name' => ''], ['name' => str_repeat('x', 256)]] as $invalid) {
