@@ -8,7 +8,7 @@ Repository rules for the `submission-proof` Nexia App Package.
 
 - Work only in this App repository. Do not copy, mount, edit or deploy Core,
   Sandbox, CLI or SDK source/runtime images. The platform operator owns them.
-- Import PHP platform contracts from `nexia/sdk-laravel` and
+- Import PHP platform contracts from `nexia-cloud-os/sdk-laravel` and
   frontend contracts from `@nexia/sdk`. Do not import Core or another App.
 - Preserve the Composer PSR-4 namespace and registered App identity. Use
   Resource References, public contracts and declared events for cross-App work.
