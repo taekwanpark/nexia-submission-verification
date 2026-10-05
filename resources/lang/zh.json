@@ -5,7 +5,7 @@
     "permissions.keys.submission-proof.note.create.label": "创建 Notes",
     "permissions.keys.submission-proof.note.delete.description": "允许删除 Notes。",
     "permissions.keys.submission-proof.note.delete.label": "删除 Notes",
-    "permissions.keys.submission-proof.note.read.description": "允许查看 Notes。",
+    "permissions.keys.submission-proof.note.read.description": "仅用于虚构测试数据。所有拥有读取权限的租户成员均可查看便笺，不按作者或组织保密。以最后一次保存为准，可能覆盖并发编辑。已删除的便笺及历史记录无限期保留，可通过授权 API 恢复；不提供自动永久删除。请勿输入个人信息或真实业务数据。",
     "permissions.keys.submission-proof.note.read.label": "查看 Notes",
     "permissions.keys.submission-proof.note.update.description": "允许更新 Notes。",
     "permissions.keys.submission-proof.note.update.label": "更新 Notes",
@@ -30,7 +30,7 @@
     "submission-proof.note.inspector.empty": "选择一行进行检查。",
     "submission-proof.note.inspector.resize": "调整检查器宽度",
     "submission-proof.note.inspector.title": "Note 检查器",
-    "submission-proof.note.list.description": "管理 Notes 记录。",
+    "submission-proof.note.list.description": "仅用于虚构测试数据。所有拥有读取权限的租户成员均可查看便笺，不按作者或组织保密。以最后一次保存为准，可能覆盖并发编辑。已删除的便笺及历史记录无限期保留，可通过授权 API 恢复；不提供自动永久删除。请勿输入个人信息或真实业务数据。",
     "submission-proof.note.list.empty": "暂无 Notes 记录。",
     "submission-proof.note.list.search.label": "搜索 Notes",
     "submission-proof.note.list.search.placeholder": "搜索",
@@ -41,7 +41,7 @@
     "submission-proof.note.sections.basics": "基本信息",
     "submission-proof.note.sections.basics_description": "此 Note 的基本信息。",
     "submission-proof.note.updated_at.label": "更新时间",
-    "submission-proof.overview.empty.description": "请从应用菜单中选择可用页面。",
+    "submission-proof.overview.empty.description": "仅用于虚构测试数据。所有拥有读取权限的租户成员均可查看便笺，不按作者或组织保密。以最后一次保存为准，可能覆盖并发编辑。已删除的便笺及历史记录无限期保留，可通过授权 API 恢复；不提供自动永久删除。请勿输入个人信息或真实业务数据。",
     "submission-proof.overview.subtitle": "欢迎使用 Submission Proof。",
     "submission-proof.overview.title": "Submission Proof"
 }
